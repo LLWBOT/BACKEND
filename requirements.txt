@@ -1,4 +1,4 @@
-Flask
-Flask-CORS
-psd-tools
-pillow
+Flask==2.3.3
+Flask-CORS==4.0.0
+psd-tools==1.9.3
+pillow==10.0.1
