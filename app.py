@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from psd_tools import PSDImage
+from psd_tools import PSDImage  # Keep the import for now
 import io
 from PIL import Image
 import base64
@@ -22,36 +22,8 @@ def render_psd_preview(psd_image, size=(512, 512)):
 
 @app.route('/upload', methods=['POST'])
 def upload_psd():
-    if 'psdFile' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['psdFile']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file:
-        try:
-            psd = PSDImage.open(file)
-            text_layers_data = []
-            for i, layer in enumerate(psd):
-                if not layer.is_group() and layer.kind == 'type':
-                    layer_info = {
-                        'id': i,
-                        'name': layer.name,
-                        'type': layer.kind,
-                        'visible': layer.is_visible,
-                        'text': layer.text if hasattr(layer, 'text') else "Could not read text"
-                    }
-                    text_layers_data.append(layer_info)
-
-            preview_base64 = None
-            preview_io = render_psd_preview(psd)
-            if preview_io:
-                preview_base64 = base64.b64encode(preview_io.read()).decode('utf-8')
-
-            return jsonify({'layers': text_layers_data, 'preview': preview_base64})
-
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    return jsonify({'error': 'Something went wrong'}), 500
+    # Simplified response for testing connectivity
+    return jsonify({'status': 'success', 'message': 'Upload endpoint reached'})
 
 @app.route('/update_text', methods=['POST'])
 def update_text():
@@ -106,6 +78,10 @@ def save_psd():
             return jsonify({'error': str(e)}), 500
     else:
         return jsonify({'error': 'No PSD file to save'}), 400
+
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'OK', 'message': 'Backend is healthy'})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
