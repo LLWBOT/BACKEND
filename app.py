@@ -31,11 +31,13 @@ def upload_psd():
                     })
 
             preview_image = None
-            if img.image is not None:
-                preview = img.image
+            try:
+                composite_image = img.composite()
                 buffered = BytesIO()
-                preview.save(buffered, format="PNG")
+                composite_image.save(buffered, format="PNG")
                 preview_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            except Exception as e:
+                print(f"Error compositing image: {e}")
 
             return jsonify({'layers': layers_data, 'preview': preview_image})
 
@@ -49,8 +51,7 @@ def update_text():
     data = request.get_json()
     layer_id = data.get('layer_id')
     text = data.get('text')
-    # In a real application, you would need to handle the PSD file again
-    # and modify the text of the specified layer. This is a placeholder.
+    # Placeholder
     return jsonify({'success': True, 'message': f'Text of layer {layer_id} updated to "{text}"'})
 
 @app.route('/save_psd', methods=['POST'])
@@ -58,8 +59,7 @@ def save_psd():
     if 'psdFile' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
     file = request.files['psdFile']
-    # In a real application, you would process the changes and save the PSD.
-    # This is a placeholder - we are just sending the original file back.
+    # Placeholder
     try:
         buffered = BytesIO(file.read())
         b64_psd = base64.b64encode(buffered.getvalue()).decode('utf-8')
