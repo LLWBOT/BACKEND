@@ -22,7 +22,7 @@ def upload_psd():
         try:
             img = PSDImage.open(file)
             layers_data = []
-            for layer in img.descendants():  # Use descendants() to get all layers recursively
+            for layer in img.descendants():
                 if layer.kind == 'type':
                     layers_data.append({
                         'id': layer.layer_id,
@@ -31,7 +31,7 @@ def upload_psd():
                     })
 
             preview_image = None
-            if img.has_image():
+            if img.image is not None:
                 preview = img.image
                 buffered = BytesIO()
                 preview.save(buffered, format="PNG")
