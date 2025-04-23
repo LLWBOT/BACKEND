@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from psd_tools import PSDImage
+import base64
+from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)
@@ -50,15 +52,39 @@ def update_text():
         return jsonify({'error': 'No PSD file provided'}), 400
     file = request.files['psdFile']
     layer_id = request.form.get('layer_id')
-    if not layer_id:
-        return jsonify({'error': 'Missing layer_id'}), 400
+    text = request.form.get('text')
+    if not layer_id or text is None:
+        return jsonify({'error': 'Missing layer_id or text'}), 400
+
     try:
         img = PSDImage.open(file)
+        found_layer = None
         for layer in img.descendants():
             if layer.layer_id == int(layer_id) and layer.kind == 'type':
-                print(f"Found layer: {layer.name}, {layer.layer_id}, {layer}")
-                return jsonify({'success': True, 'message': f'Found layer {layer.name}'})
-        return jsonify({'error': f'Layer with id {layer_id} not found'}), 404
+                print(f"Found layer: {layer.name}, ID: {layer.layer_id}")
+                try:
+                    layer.text = text
+                    found_layer = layer
+                    print(f"Text set successfully to: '{layer.text}'")
+                except Exception as e:
+                    print(f"Error setting text for layer {layer.name} ({layer.layer_id}): {e}")
+                    return jsonify({'success': False, 'error': f"Can't set text: {e}"}), 500
+                break
+
+        if found_layer:
+            preview_image = None
+            try:
+                composite_image = img.composite()
+                buffered = BytesIO()
+                composite_image.save(buffered, format="PNG")
+                preview_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+                return jsonify({'success': True, 'message': f'Text updated to "{text}"', 'preview': preview_image})
+            except Exception as e:
+                print(f"Error compositing image after text update: {e}")
+                return jsonify({'success': True, 'message': f'Text updated, but preview failed.'})
+        else:
+            return jsonify({'error': f'Layer with id {layer_id} not found'}), 404
+
     except Exception as e:
         print(f"Error processing PSD: {e}")
         return jsonify({'error': str(e)}), 500
