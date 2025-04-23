@@ -58,9 +58,8 @@ def update_text():
     if file.filename == '':
         return jsonify({'error': 'No PSD file selected for update'}), 400
 
-    data = request.get_json()
-    layer_id = data.get('layer_id')
-    text = data.get('text')
+    layer_id = request.form.get('layer_id')
+    text = request.form.get('text')
 
     if layer_id is None or text is None:
         return jsonify({'error': 'Missing layer_id or text in request'}), 400
@@ -69,7 +68,7 @@ def update_text():
         img = PSDImage.open(file)
         found_layer = None
         for layer in img.descendants():
-            if layer.layer_id == layer_id and layer.kind == 'type':
+            if layer.layer_id == int(layer_id) and layer.kind == 'type':
                 layer.text = text
                 found_layer = layer
                 break
@@ -89,6 +88,7 @@ def update_text():
             return jsonify({'error': f'Layer with id {layer_id} not found or is not a text layer'}), 404
 
     except Exception as e:
+        print(f"General error in /update_text: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/save_psd', methods=['POST'])
