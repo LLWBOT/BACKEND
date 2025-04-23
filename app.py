@@ -7,6 +7,10 @@ from io import BytesIO
 app = Flask(__name__)
 CORS(app)
 
+# In a real application, you would need a way to manage the uploaded file.
+# This simplified example re-opens the file from the request on each update,
+# which is inefficient for larger files or frequent updates.
+
 @app.route('/health')
 def health_check():
     return jsonify({"status": "healthy"})
@@ -48,18 +52,51 @@ def upload_psd():
 
 @app.route('/update_text', methods=['POST'])
 def update_text():
+    if 'psdFile' not in request.files:
+        return jsonify({'error': 'No PSD file provided for update'}), 400
+    file = request.files['psdFile']
+    if file.filename == '':
+        return jsonify({'error': 'No PSD file selected for update'}), 400
+
     data = request.get_json()
     layer_id = data.get('layer_id')
     text = data.get('text')
-    # Placeholder
-    return jsonify({'success': True, 'message': f'Text of layer {layer_id} updated to "{text}"'})
+
+    if layer_id is None or text is None:
+        return jsonify({'error': 'Missing layer_id or text in request'}), 400
+
+    try:
+        img = PSDImage.open(file)
+        found_layer = None
+        for layer in img.descendants():
+            if layer.layer_id == layer_id and layer.kind == 'type':
+                layer.text = text
+                found_layer = layer
+                break
+
+        if found_layer:
+            preview_image = None
+            try:
+                composite_image = img.composite()
+                buffered = BytesIO()
+                composite_image.save(buffered, format="PNG")
+                preview_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+                return jsonify({'success': True, 'message': f'Text of layer {layer_id} updated to "{text}"', 'preview': preview_image})
+            except Exception as e:
+                print(f"Error compositing updated image: {e}")
+                return jsonify({'success': True, 'message': f'Text of layer {layer_id} updated to "{text}", but preview update failed.'})
+        else:
+            return jsonify({'error': f'Layer with id {layer_id} not found or is not a text layer'}), 404
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/save_psd', methods=['POST'])
 def save_psd():
     if 'psdFile' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
     file = request.files['psdFile']
-    # Placeholder
+    # Placeholder - in a real application, you would process the changes and save.
     try:
         buffered = BytesIO(file.read())
         b64_psd = base64.b64encode(buffered.getvalue()).decode('utf-8')
