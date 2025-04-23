@@ -69,8 +69,16 @@ def update_text():
         found_layer = None
         for layer in img.descendants():
             if layer.layer_id == int(layer_id) and layer.kind == 'type':
-                layer.text = text
-                found_layer = layer
+                print(f"Found layer: {layer.name}, ID: {layer.layer_id}, Kind: {layer.kind}")
+                print(f"Layer has text attribute: {'text' in dir(layer)}")
+                if 'text' in dir(layer):
+                    print(f"Current layer.text value: '{layer.text}'")
+                try:
+                    layer.text = text
+                    found_layer = layer
+                except Exception as e:
+                    print(f"Error setting text for layer {layer.name} ({layer.layer_id}): {e}")
+                    return jsonify({'success': False, 'error': f"Can't set attribute: {e}"}), 500
                 break
 
         if found_layer:
