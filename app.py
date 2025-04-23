@@ -1,15 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from psd_tools import PSDImage
-import base64
-from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)
-
-# In a real application, you would need a way to manage the uploaded file.
-# This simplified example re-opens the file from the request on each update,
-# which is inefficient for larger files or frequent updates.
 
 @app.route('/health')
 def health_check():
@@ -53,50 +47,20 @@ def upload_psd():
 @app.route('/update_text', methods=['POST'])
 def update_text():
     if 'psdFile' not in request.files:
-        return jsonify({'error': 'No PSD file provided for update'}), 400
+        return jsonify({'error': 'No PSD file provided'}), 400
     file = request.files['psdFile']
-    if file.filename == '':
-        return jsonify({'error': 'No PSD file selected for update'}), 400
-
     layer_id = request.form.get('layer_id')
-    text = request.form.get('text')
-
-    if layer_id is None or text is None:
-        return jsonify({'error': 'Missing layer_id or text in request'}), 400
-
+    if not layer_id:
+        return jsonify({'error': 'Missing layer_id'}), 400
     try:
         img = PSDImage.open(file)
-        found_layer = None
         for layer in img.descendants():
             if layer.layer_id == int(layer_id) and layer.kind == 'type':
-                print(f"Found layer: {layer.name}, ID: {layer.layer_id}, Kind: {layer.kind}")
-                print(f"Layer has text attribute: {'text' in dir(layer)}")
-                if 'text' in dir(layer):
-                    print(f"Current layer.text value: '{layer.text}'")
-                try:
-                    layer.text = text
-                    found_layer = layer
-                except Exception as e:
-                    print(f"Error setting text for layer {layer.name} ({layer.layer_id}): {e}")
-                    return jsonify({'success': False, 'error': f"Can't set attribute: {e}"}), 500
-                break
-
-        if found_layer:
-            preview_image = None
-            try:
-                composite_image = img.composite()
-                buffered = BytesIO()
-                composite_image.save(buffered, format="PNG")
-                preview_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
-                return jsonify({'success': True, 'message': f'Text of layer {layer_id} updated to "{text}"', 'preview': preview_image})
-            except Exception as e:
-                print(f"Error compositing updated image: {e}")
-                return jsonify({'success': True, 'message': f'Text of layer {layer_id} updated to "{text}", but preview update failed.'})
-        else:
-            return jsonify({'error': f'Layer with id {layer_id} not found or is not a text layer'}), 404
-
+                print(f"Found layer: {layer.name}, {layer.layer_id}, {layer}")
+                return jsonify({'success': True, 'message': f'Found layer {layer.name}'})
+        return jsonify({'error': f'Layer with id {layer_id} not found'}), 404
     except Exception as e:
-        print(f"General error in /update_text: {e}")
+        print(f"Error processing PSD: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/save_psd', methods=['POST'])
